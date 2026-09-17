@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: parking
+      POSTGRES_PASSWORD: parking
+      POSTGRES_DB: parking
+    ports:
+      - "5432:5432"
+    volumes:
+      - parking_pgdata:/var/lib/postgresql/data
+
+volumes:
+  parking_pgdata:
