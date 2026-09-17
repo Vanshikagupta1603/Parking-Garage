@@ -1,12 +1,846 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Parking Garage — Attendant Console</title>
-  </head>
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garage Attendant Dashboard - Parking Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        garage: {
+                            50: '#f4f6f8',
+                            100: '#e5e9f0',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#080d1a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- React & Babel Standalone -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-receipt, #printable-receipt * {
+                visibility: visible;
+            }
+            #printable-receipt {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- SVG ICON COMPONENTS ---
+        const IconCar = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 17a2 2 0 100 4 2 2 0 000-4pt2 2 0 100 4 2 2 0 000-4m10 0a2 2 0 100 4 2 2 0 000-4pt2 2 0 100 4 2 2 0 000-4M3 9l2-4h10l2 4M3 9h18v7a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" />
+            </svg>
+        );
+
+        const IconZap = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+        );
+
+        const IconSearch = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+        );
+
+        const IconCheckIn = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+        );
+
+        const IconCheckOut = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+        );
+
+        const IconDollar = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 12v-2m0-10V4m0 16v-2m-3-6h6" />
+            </svg>
+        );
+
+        const IconPrinter = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+        );
+
+        const IconX = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        );
+
+        // Simulated API Layer for pricing engine and state mutations
+        const RACK_RATES = {
+            FIRST_HOUR: 10.00,
+            ADDITIONAL_HOUR: 5.00,
+            DAILY_CAP: 40.00,
+            GRACE_MINUTES: 15
+        };
+
+        const initialParkingSpots = [
+            // Level 1
+            { id: "s1-1", floor: 1, number: 101, type: "EV", isOccupied: true },
+            { id: "s1-2", floor: 1, number: 102, type: "EV", isOccupied: false },
+            { id: "s1-3", floor: 1, number: 103, type: "EV", isOccupied: true },
+            { id: "s1-4", floor: 1, number: 104, type: "COMPACT", isOccupied: false },
+            { id: "s1-5", floor: 1, number: 105, type: "STANDARD", isOccupied: true },
+            { id: "s1-6", floor: 1, number: 106, type: "STANDARD", isOccupied: false },
+
+            // Level 2
+            { id: "s2-1", floor: 2, number: 201, type: "EV", isOccupied: false },
+            { id: "s2-2", floor: 2, number: 202, type: "COMPACT", isOccupied: true },
+            { id: "s2-3", floor: 2, number: 203, type: "COMPACT", isOccupied: false },
+            { id: "s2-4", floor: 2, number: 204, type: "STANDARD", isOccupied: true },
+            { id: "s2-5", floor: 2, number: 205, type: "STANDARD", isOccupied: false },
+            { id: "s2-6", floor: 2, number: 206, type: "STANDARD", isOccupied: true },
+
+            // Level 3
+            { id: "s3-1", floor: 3, number: 301, type: "STANDARD", isOccupied: false },
+            { id: "s3-2", floor: 3, number: 302, type: "STANDARD", isOccupied: false },
+            { id: "s3-3", floor: 3, number: 303, type: "STANDARD", isOccupied: false },
+            { id: "s3-4", floor: 3, number: 304, type: "STANDARD", isOccupied: false },
+            { id: "s3-5", floor: 3, number: 305, type: "STANDARD", isOccupied: true },
+            { id: "s3-6", floor: 3, number: 306, type: "STANDARD", isOccupied: false }
+        ];
+
+        const initialActiveTickets = [
+            {
+                ticketId: "tkt-001",
+                plate: "EV-9982",
+                spotId: "s1-1",
+                spotType: "EV",
+                floor: 1,
+                spotNumber: 101,
+                entryTime: new Date(Date.now() - 3600 * 1000 * 4.5).toISOString() // 4.5 hours ago
+            },
+            {
+                ticketId: "tkt-002",
+                plate: "TESLA-X",
+                spotId: "s1-3",
+                spotType: "EV",
+                floor: 1,
+                spotNumber: 103,
+                entryTime: new Date(Date.now() - 3600 * 1000 * 0.5).toISOString() // 30 mins ago
+            },
+            {
+                ticketId: "tkt-003",
+                plate: "NYK-4091",
+                spotId: "s1-5",
+                spotType: "STANDARD",
+                floor: 1,
+                spotNumber: 105,
+                entryTime: new Date(Date.now() - 3600 * 1000 * 1.2).toISOString() // 1.2 hrs ago
+            },
+            {
+                ticketId: "tkt-004",
+                plate: "MINI-77",
+                spotId: "s2-2",
+                spotType: "COMPACT",
+                floor: 2,
+                spotNumber: 202,
+                entryTime: new Date(Date.now() - 3600 * 1000 * 9.0).toISOString() // 9 hrs ago
+            },
+            {
+                ticketId: "tkt-005",
+                plate: "LKN-8831",
+                spotId: "s2-4",
+                spotType: "STANDARD",
+                floor: 2,
+                spotNumber: 204,
+                entryTime: new Date(Date.now() - 3600 * 1000 * 0.1).toISOString() // 6 mins ago
+            },
+            {
+                ticketId: "tkt-006",
+                plate: "BND-1022",
+                spotId: "s2-6",
+                spotType: "STANDARD",
+                floor: 2,
+                spotNumber: 206,
+                entryTime: new Date(Date.now() - 3600 * 1000 * 25.0).toISOString() // 25 hrs ago
+            },
+            {
+                ticketId: "tkt-007",
+                plate: "AUDI-Q7",
+                spotId: "s3-5",
+                spotType: "STANDARD",
+                floor: 3,
+                spotNumber: 305,
+                entryTime: new Date(Date.now() - 3600 * 1000 * 2.1).toISOString()
+            }
+        ];
+
+        function App() {
+            const [spots, setSpots] = useState(initialParkingSpots);
+            const [activeTickets, setActiveTickets] = useState(initialActiveTickets);
+            const [logs, setLogs] = useState([
+                { id: 1, type: "CHECK_IN", plate: "EV-9982", time: new Date(Date.now() - 3600 * 1000 * 4.5).toLocaleTimeString(), details: "Assigned EV Spot #101" },
+                { id: 2, type: "CHECK_IN", plate: "MINI-77", time: new Date(Date.now() - 3600 * 1000 * 9.0).toLocaleTimeString(), details: "Assigned Compact Spot #202" },
+                { id: 3, type: "CHECK_OUT", plate: "BMW-520I", time: new Date(Date.now() - 3600 * 1000 * 1.5).toLocaleTimeString(), details: "Settled $20.00 (3 hrs)" }
+            ]);
+
+            const [selectedFloor, setSelectedFloor] = useState(1);
+            const [searchQuery, setSearchQuery] = useState("");
+            const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+            const [checkoutTicket, setCheckoutTicket] = useState(null);
+            const [checkinForm, setCheckinForm] = useState({ plate: "", type: "STANDARD" });
+            const [notification, setNotification] = useState(null);
+            const [totalCollectedRevenue, setTotalCollectedRevenue] = useState(145.00);
+
+            // Toast message helper
+            const showToast = (message, type = "success") => {
+                setNotification({ message, type });
+                setTimeout(() => setNotification(null), 3500);
+            };
+
+            // Calculated Stats
+            const stats = useMemo(() => {
+                const totalSpots = spots.length;
+                const occupiedSpots = spots.filter(s => s.isOccupied).length;
+                const freeSpots = totalSpots - occupiedSpots;
+                const totalEV = spots.filter(s => s.type === "EV").length;
+                const freeEV = spots.filter(s => s.type === "EV" && !s.isOccupied).length;
+
+                return {
+                    totalSpots,
+                    occupiedSpots,
+                    freeSpots,
+                    occupancyRate: Math.round((occupiedSpots / totalSpots) * 100),
+                    totalEV,
+                    freeEV,
+                    activeTicketsCount: activeTickets.length
+                };
+            }, [spots, activeTickets]);
+
+            // Backend Simulation: Calculate Parking Fee
+            const calculateFeeFromAPI = (entryTimeString) => {
+                const entry = new Date(entryTimeString);
+                const exit = new Date();
+                const totalSeconds = Math.max(0, Math.floor((exit - entry) / 1000));
+                
+                // Grace Period Check
+                if (totalSeconds <= RACK_RATES.GRACE_MINUTES * 60) {
+                    return {
+                        durationFormatted: `${Math.floor(totalSeconds / 60)}m ${totalSeconds % 60}s`,
+                        billableHours: 0,
+                        breakdown: "Within 15-minute grace period",
+                        totalFee: "0.00",
+                        entryTimeFormatted: entry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        exitTimeFormatted: exit.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    };
+                }
+
+                const billableHours = Math.ceil(totalSeconds / 3600);
+                const fullDays = Math.floor(billableHours / 24);
+                const remHours = billableHours % 24;
+
+                let partialFee = 0;
+                let breakdownText = "";
+
+                if (remHours === 1) {
+                    partialFee = RACK_RATES.FIRST_HOUR;
+                    breakdownText = `1st Hour ($${RACK_RATES.FIRST_HOUR.toFixed(2)})`;
+                } else if (remHours > 1) {
+                    const rawPartial = RACK_RATES.FIRST_HOUR + (remHours - 1) * RACK_RATES.ADDITIONAL_HOUR;
+                    partialFee = Math.min(rawPartial, RACK_RATES.DAILY_CAP);
+                    if (rawPartial >= RACK_RATES.DAILY_CAP) {
+                        breakdownText = `Partial Day Capped at $${RACK_RATES.DAILY_CAP.toFixed(2)}`;
+                    } else {
+                        breakdownText = `1st Hr ($${RACK_RATES.FIRST_HOUR}) + ${remHours - 1} addl hr(s) @ $${RACK_RATES.ADDITIONAL_HOUR}`;
+                    }
+                }
+
+                const totalFee = (fullDays * RACK_RATES.DAILY_CAP) + partialFee;
+                if (fullDays > 0) {
+                    breakdownText = `${fullDays} Full Day(s) @ $${RACK_RATES.DAILY_CAP} + ${breakdownText}`;
+                }
+
+                const hrs = Math.floor(totalSeconds / 3600);
+                const mins = Math.floor((totalSeconds % 3600) / 60);
+
+                return {
+                    durationFormatted: `${hrs}h ${mins}m`,
+                    billableHours,
+                    breakdown: breakdownText,
+                    totalFee: totalFee.toFixed(2),
+                    entryTimeFormatted: entry.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
+                    exitTimeFormatted: exit.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                };
+            };
+
+            // Search filtering
+            const filteredTickets = useMemo(() => {
+                if (!searchQuery.trim()) return [];
+                return activeTickets.filter(t => 
+                    t.plate.toLowerCase().includes(searchQuery.trim().toLowerCase())
+                );
+            }, [searchQuery, activeTickets]);
+
+            // Handle Check-In Submission
+            const handleCheckInSubmit = (e) => {
+                e.preventDefault();
+                const plate = checkinForm.plate.trim().toUpperCase();
+                if (!plate) {
+                    showToast("Please enter a valid license plate", "error");
+                    return;
+                }
+
+                // Check for existing active ticket
+                if (activeTickets.some(t => t.plate === plate)) {
+                    showToast(`Vehicle '${plate}' is already checked in!`, "error");
+                    return;
+                }
+
+                // Auto-Assign free spot of requested type
+                const availableSpot = spots.find(s => s.type === checkinForm.type && !s.isOccupied);
+
+                if (!availableSpot) {
+                    showToast(`No available ${checkinForm.type} spots right now.`, "error");
+                    return;
+                }
+
+                // Execute Atomic Check-In
+                const newTicket = {
+                    ticketId: `tkt-${Date.now().toString().slice(-4)}`,
+                    plate,
+                    spotId: availableSpot.id,
+                    spotType: availableSpot.type,
+                    floor: availableSpot.floor,
+                    spotNumber: availableSpot.number,
+                    entryTime: new Date().toISOString()
+                };
+
+                // Update spots state
+                setSpots(prev => prev.map(s => s.id === availableSpot.id ? { ...s, isOccupied: true } : s));
+                setActiveTickets(prev => [newTicket, ...prev]);
+
+                // Append audit log
+                setLogs(prev => [{
+                    id: Date.now(),
+                    type: "CHECK_IN",
+                    plate,
+                    time: new Date().toLocaleTimeString(),
+                    details: `Assigned ${availableSpot.type} Spot #${availableSpot.number} (Floor ${availableSpot.floor})`
+                }, ...prev]);
+
+                showToast(`Checked in ${plate} to Spot #${availableSpot.number} (Level ${availableSpot.floor})`);
+                setIsCheckInOpen(false);
+                setCheckinForm({ plate: "", type: "STANDARD" });
+            };
+
+            // Handle Check-Out Settlement
+            const handleConfirmCheckout = (ticket, feeData) => {
+                // Free the spot
+                setSpots(prev => prev.map(s => s.id === ticket.spotId ? { ...s, isOccupied: false } : s));
+                // Remove active ticket
+                setActiveTickets(prev => prev.filter(t => t.ticketId !== ticket.ticketId));
+
+                const feeNumber = parseFloat(feeData.totalFee);
+                setTotalCollectedRevenue(prev => prev + feeNumber);
+
+                // Add log
+                setLogs(prev => [{
+                    id: Date.now(),
+                    type: "CHECK_OUT",
+                    plate: ticket.plate,
+                    time: new Date().toLocaleTimeString(),
+                    details: `Settled $${feeData.totalFee} (${feeData.durationFormatted})`
+                }, ...prev]);
+
+                showToast(`Successfully checked out ${ticket.plate}. Payment of $${feeData.totalFee} confirmed.`);
+                setCheckoutTicket(null);
+                setSearchQuery("");
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col justify-between">
+                    {/* Header Bar */}
+                    <header className="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-20">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-500/30">
+                                    <IconCar />
+                                </div>
+                                <div>
+                                    <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                                        MetroPark Central
+                                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">LIVE</span>
+                                    </h1>
+                                    <p className="text-xs text-slate-400">Attendant Terminal v2.4 • Operator #409</p>
+                                </div>
+                            </div>
+
+                            {/* Quick Action Button */}
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setIsCheckInOpen(true)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-all shadow-md hover:shadow-indigo-500/20 active:scale-95"
+                                >
+                                    <IconCheckIn />
+                                    <span>Check In Vehicle</span>
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Notification Toast */}
+                    {notification && (
+                        <div className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur flex items-center gap-3 animate-bounce ${
+                            notification.type === 'error' 
+                                ? 'bg-rose-900/90 text-rose-100 border-rose-700' 
+                                : 'bg-emerald-900/90 text-emerald-100 border-emerald-700'
+                        }`}>
+                            <span className="font-medium text-sm">{notification.message}</span>
+                        </div>
+                    )}
+
+                    {/* Main Content Area */}
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-grow w-full">
+                        
+                        {}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Stat 1: Total Occupancy */}
+                            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col justify-between">
+                                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                                    <span>TOTAL OCCUPANCY</span>
+                                    <IconCar />
+                                </div>
+                                <div className="mt-2 flex items-baseline justify-between">
+                                    <span className="text-2xl font-extrabold text-white">{stats.occupiedSpots} <span className="text-xs font-normal text-slate-400">/ {stats.totalSpots}</span></span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${stats.occupancyRate > 85 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                        {stats.occupancyRate}%
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Stat 2: EV Availability */}
+                            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col justify-between">
+                                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                                    <span>EV CHARGERS FREE</span>
+                                    <div className="text-cyan-400"><IconZap /></div>
+                                </div>
+                                <div className="mt-2 flex items-baseline justify-between">
+                                    <span className="text-2xl font-extrabold text-cyan-400">{stats.freeEV} <span className="text-xs font-normal text-slate-400">/ {stats.totalEV} free</span></span>
+                                    <span className="text-xs text-slate-400">Tier 3 Fast</span>
+                                </div>
+                            </div>
+
+                            {/* Stat 3: Active Tickets */}
+                            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col justify-between">
+                                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                                    <span>ACTIVE TICKETS</span>
+                                    <IconCheckIn />
+                                </div>
+                                <div className="mt-2 flex items-baseline justify-between">
+                                    <span className="text-2xl font-extrabold text-amber-400">{stats.activeTicketsCount}</span>
+                                    <span className="text-xs text-slate-400">In Garage</span>
+                                </div>
+                            </div>
+
+                            {/* Stat 4: Revenue */}
+                            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col justify-between">
+                                <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                                    <span>TODAY'S REVENUE</span>
+                                    <div className="text-emerald-400"><IconDollar /></div>
+                                </div>
+                                <div className="mt-2 flex items-baseline justify-between">
+                                    <span className="text-2xl font-extrabold text-emerald-400">${totalCollectedRevenue.toFixed(2)}</span>
+                                    <span className="text-xs text-slate-400">Settled</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {}
+                        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 space-y-3">
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <IconSearch />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Instant License Plate Search (e.g. 'EV-9982', 'TESLA')..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-mono tracking-wide"
+                                />
+                                {searchQuery && (
+                                    <button 
+                                        onClick={() => setSearchQuery("")}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
+                                    >
+                                        <IconX />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Search Results Drawer */}
+                            {searchQuery.trim() && (
+                                <div className="mt-3 bg-slate-900 border border-slate-700 rounded-lg p-3 space-y-2">
+                                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                        Matching Active Vehicles ({filteredTickets.length})
+                                    </div>
+                                    {filteredTickets.length === 0 ? (
+                                        <p className="text-sm text-slate-500 italic py-2">No active vehicle found matching '{searchQuery}'</p>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {filteredTickets.map(tkt => {
+                                                const feeData = calculateFeeFromAPI(tkt.entryTime);
+                                                return (
+                                                    <div key={tkt.ticketId} className="bg-slate-800 border border-slate-700 rounded-lg p-3 flex flex-col justify-between space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-mono font-bold text-lg text-indigo-300">{tkt.plate}</span>
+                                                            <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">
+                                                                Level {tkt.floor} • Spot #{tkt.spotNumber}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs text-slate-400 space-y-1">
+                                                            <div>Duration: <span className="text-white font-medium">{feeData.durationFormatted}</span></div>
+                                                            <div>Current Fee: <span className="text-emerald-400 font-bold">${feeData.totalFee}</span></div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setCheckoutTicket(tkt)}
+                                                            className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold transition-all flex items-center justify-center gap-1"
+                                                        >
+                                                            <IconCheckOut />
+                                                            <span>Process Checkout</span>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {}
+                        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5 space-y-4">
+                            {/* Floor Switcher & Legend */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-700/60 pb-4">
+                                <div className="flex items-center space-x-2">
+                                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2">Level:</span>
+                                    {[1, 2, 3].map(floor => (
+                                        <button
+                                            key={floor}
+                                            onClick={() => setSelectedFloor(floor)}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                selectedFloor === floor 
+                                                    ? 'bg-indigo-600 text-white shadow-md' 
+                                                    : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                                            }`}
+                                        >
+                                            Floor {floor}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Status Color Legend */}
+                                <div className="flex items-center gap-4 text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                                        <span className="text-slate-300">Available</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-3 h-3 rounded-full bg-rose-500"></span>
+                                        <span className="text-slate-300">Occupied</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-3 h-3 rounded-full bg-cyan-500"></span>
+                                        <span className="text-slate-300">EV Charger</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                                        <span className="text-slate-300">Compact</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Spot Grid Cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                                {spots.filter(s => s.floor === selectedFloor).map(spot => {
+                                    const ticket = activeTickets.find(t => t.spotId === spot.id);
+                                    
+                                    // Determine styling based on type and status
+                                    let spotBg = "bg-slate-900 border-slate-700";
+                                    let typeBadgeColor = "text-slate-400 bg-slate-800";
+
+                                    if (spot.type === "EV") typeBadgeColor = "text-cyan-400 bg-cyan-950/60 border border-cyan-800/50";
+                                    if (spot.type === "COMPACT") typeBadgeColor = "text-amber-400 bg-amber-950/60 border border-amber-800/50";
+
+                                    if (spot.isOccupied) {
+                                        spotBg = "bg-rose-950/30 border-rose-800/60 hover:border-rose-500";
+                                    } else {
+                                        spotBg = "bg-emerald-950/20 border-emerald-800/40 hover:border-emerald-500";
+                                    }
+
+                                    return (
+                                        <div
+                                            key={spot.id}
+                                            onClick={() => {
+                                                if (ticket) setCheckoutTicket(ticket);
+                                                else {
+                                                    setCheckinForm(prev => ({ ...prev, type: spot.type }));
+                                                    setIsCheckInOpen(true);
+                                                }
+                                            }}
+                                            className={`border rounded-xl p-3 flex flex-col justify-between h-28 cursor-pointer transition-all hover:scale-[1.02] shadow-sm relative group ${spotBg}`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-mono font-bold text-slate-300">#{spot.number}</span>
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${typeBadgeColor}`}>
+                                                    {spot.type}
+                                                </span>
+                                            </div>
+
+                                            {spot.isOccupied ? (
+                                                <div className="my-auto space-y-0.5">
+                                                    <div className="flex items-center gap-1.5 text-rose-400 text-xs font-bold font-mono">
+                                                        <IconCar />
+                                                        <span className="truncate">{ticket ? ticket.plate : "OCCUPIED"}</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400">Click to Checkout</div>
+                                                </div>
+                                            ) : (
+                                                <div className="my-auto text-center">
+                                                    <span className="text-xs font-semibold text-emerald-400">AVAILABLE</span>
+                                                    <p className="text-[10px] text-slate-500 mt-0.5">Click to Check-in</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {}
+                        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5 space-y-3">
+                            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Today's Activity Log</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs text-slate-300">
+                                    <thead className="bg-slate-900/60 text-slate-400 uppercase font-semibold">
+                                        <tr>
+                                            <th className="p-2.5 rounded-l-lg">Time</th>
+                                            <th className="p-2.5">Action</th>
+                                            <th className="p-2.5">Plate</th>
+                                            <th className="p-2.5 rounded-r-lg">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800">
+                                        {logs.map(log => (
+                                            <tr key={log.id} className="hover:bg-slate-800/30 transition-colors">
+                                                <td className="p-2.5 font-mono text-slate-400">{log.time}</td>
+                                                <td className="p-2.5">
+                                                    <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                                                        log.type === 'CHECK_IN' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                                    }`}>
+                                                        {log.type}
+                                                    </span>
+                                                </td>
+                                                <td className="p-2.5 font-mono font-bold text-white">{log.plate}</td>
+                                                <td className="p-2.5 text-slate-400">{log.details}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </main>
+
+                    {}
+                    {isCheckInOpen && (
+                        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+                                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                        <IconCheckIn />
+                                        <span>Check In New Vehicle</span>
+                                    </h3>
+                                    <button onClick={() => setIsCheckInOpen(false)} className="text-slate-400 hover:text-white">
+                                        <IconX />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleCheckInSubmit} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                                            License Plate Number
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. ABC-1234"
+                                            value={checkinForm.plate}
+                                            onChange={(e) => setCheckinForm({ ...checkinForm, plate: e.target.value })}
+                                            className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-base uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">
+                                            Required Spot Type
+                                        </label>
+                                        <select
+                                            value={checkinForm.type}
+                                            onChange={(e) => setCheckinForm({ ...checkinForm, type: e.target.value })}
+                                            className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        >
+                                            <option value="STANDARD">Standard Vehicle</option>
+                                            <option value="COMPACT">Compact Car</option>
+                                            <option value="EV">EV (Electric Vehicle - Charging Required)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="pt-2 flex items-center justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCheckInOpen(false)}
+                                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-semibold"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold shadow-lg shadow-indigo-500/30"
+                                        >
+                                            Confirm Check-In
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {}
+                    {checkoutTicket && (() => {
+                        const feeData = calculateFeeFromAPI(checkoutTicket.entryTime);
+                        return (
+                            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                                <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+                                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                            <IconCheckOut />
+                                            <span>Vehicle Settlement & Checkout</span>
+                                        </h3>
+                                        <button onClick={() => setCheckoutTicket(null)} className="text-slate-400 hover:text-white">
+                                            <IconX />
+                                        </button>
+                                    </div>
+
+                                    {/* Printable Receipt Card */}
+                                    <div id="printable-receipt" className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 font-mono text-xs">
+                                        <div className="text-center border-b border-dashed border-slate-800 pb-2">
+                                            <div className="font-bold text-sm text-white">METROPARK GARAGE</div>
+                                            <div className="text-slate-500">100 City Center Way</div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 text-slate-300">
+                                            <div>Plate: <span className="font-bold text-white">{checkoutTicket.plate}</span></div>
+                                            <div>Ticket ID: <span className="text-slate-400">{checkoutTicket.ticketId}</span></div>
+                                            <div>Location: <span className="text-slate-400">Level {checkoutTicket.floor} - #{checkoutTicket.spotNumber}</span></div>
+                                            <div>Spot Type: <span className="text-slate-400">{checkoutTicket.spotType}</span></div>
+                                            <div>Entry: <span className="text-slate-400">{feeData.entryTimeFormatted}</span></div>
+                                            <div>Exit: <span className="text-slate-400">{feeData.exitTimeFormatted}</span></div>
+                                        </div>
+
+                                        <div className="border-t border-b border-dashed border-slate-800 py-2 space-y-1">
+                                            <div className="flex justify-between text-slate-400">
+                                                <span>Duration:</span>
+                                                <span className="text-white font-bold">{feeData.durationFormatted}</span>
+                                            </div>
+                                            <div className="flex justify-between text-slate-400">
+                                                <span>Rate Calculation:</span>
+                                                <span className="text-slate-300">{feeData.breakdown}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between text-base font-bold text-emerald-400 pt-1">
+                                            <span>TOTAL FEE DUE:</span>
+                                            <span>${feeData.totalFee}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => window.print()}
+                                            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                                        >
+                                            <IconPrinter />
+                                            <span>Print Receipt</span>
+                                        </button>
+
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCheckoutTicket(null)}
+                                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-semibold"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleConfirmCheckout(checkoutTicket, feeData)}
+                                                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold shadow-lg shadow-emerald-500/30 flex items-center gap-1.5"
+                                            >
+                                                <IconDollar />
+                                                <span>Confirm Payment & Release</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Footer */}
+                    <footer className="border-t border-slate-800 py-3 text-center text-xs text-slate-500">
+                        MetroPark System • All business rules and rate tiers processed via backend API
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+    </script>
+</body>
 </html>
